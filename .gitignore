@@ -1,0 +1,32 @@
+# ==== MPLAB X ====
+build/
+debug/
+dist/
+
+# ==== Archivos compilados ====
+*.o
+*.elf
+*.hex
+*.map
+*.lst
+*.obj
+
+# ==== Logs ====
+*.log
+
+# ==== Archivos temporales ====
+*.tmp
+*.bak
+*.swp
+
+# ==== Sistema operativo ====
+.DS_Store
+Thumbs.db
+
+# ==== IDEs ====
+.vscode/
+*.code-workspace
+
+# ==== Otros ====
+*.d
+*.dep
