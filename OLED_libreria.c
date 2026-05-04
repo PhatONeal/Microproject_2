@@ -3,6 +3,10 @@
 #include "OLED_Libreria.h"
 
 void I2C_Init(void) {
+    // Encapsulamiento de los pines I2C
+    TRISBbits.TRISB0 = 1; 
+    TRISBbits.TRISB1 = 1; 
+    
     SSPSTAT = 0x80; 
     SSPCON1 = 0x28; // I2C Master Mode
     SSPADD = 19;    // Baud rate para 100kHz a 8MHz
@@ -56,4 +60,11 @@ void OLED_Int(unsigned char pag, unsigned char col, unsigned int numero) {
     char buffer[6];
     sprintf(buffer, "%u", numero);
     OLED_String(pag, col, buffer);
+}
+
+void OLED_BorrarTexto(unsigned char pagina, unsigned char col, unsigned char longitud) {
+    OLED_SetCursor(pagina, col);
+    for(unsigned char i = 0; i < (longitud * 6); i++) {
+        OLED_Dato(0x00);
+    }
 }
