@@ -1,17 +1,18 @@
 #include <xc.h>
 #include <stdio.h>
+#include <stdint.h>
 #include "Configuracion.h"
 #include "OLED_Libreria.h"
 #include "ADC_Libreria.h"
-#include "BME280_Libreria.h" // NUEVA LIBRERÍA
+#include "BME280_Libreria.h"
 
 #define _XTAL_FREQ  8000000UL
 
 void main(void) {
     // Variables
-    unsigned int adc_temp_raw, adc_gas_raw, adc_luz_raw;
+    unsigned int adc_temp_raw, adc_luz_raw;
     unsigned int temp_lm35, gas_porcentaje, luz_porcentaje;
-    int32_t bme_temp_dummy; // La leemos pero no la usamos
+    int32_t bme_temp_dummy; 
     uint32_t bme_hum_raw;
 
     // Inicialización
@@ -24,7 +25,7 @@ void main(void) {
     ADC_Init();
     I2C_Init();
     OLED_Init();
-    BME280_Init(); // INICIALIZAR BME280
+    BME280_Init();
 
     // Pantalla de inicio
     OLED_Clear();
@@ -35,7 +36,7 @@ void main(void) {
 
     // ETIQUETAS ESTÁTICAS
     OLED_String(0, 10, "TEMP (LM35):");
-    OLED_String(2, 10, "HUMEDAD BME:"); // NUEVA ETIQUETA
+    OLED_String(2, 10, "HUMEDAD BME:");
     OLED_String(5, 0, "AIRE:");
     OLED_String(5, 64, "LUZ:");
 
@@ -48,9 +49,9 @@ void main(void) {
         BME280_Leer(&bme_temp_dummy, &bme_hum_raw);
         unsigned int hum_final = (unsigned int)bme_hum_raw;
 
-        // --- 3. MQ135 Crudo ---
-        adc_gas_raw = ADC_Leer(1);
-        gas_porcentaje = (unsigned int)((adc_gas_raw * 100UL) / 1023);
+        // --- 3. MQ135 INVERTIDO (Corrección aplicada) ---
+        unsigned int gas_inv = 1023 - ADC_Leer(1);
+        gas_porcentaje = (unsigned int)((gas_inv * 100UL) / 1023);
 
         // --- 4. LDR ---
         adc_luz_raw = ADC_Leer(2);
