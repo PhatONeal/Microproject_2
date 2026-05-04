@@ -16,12 +16,16 @@ void main(void) {
     TRISA = 0x07; 
     LATA = 0x00;
 
+    // FIX: Pines I2C como entradas para el PIC18F4550
+    TRISBbits.TRISB0 = 1; 
+    TRISBbits.TRISB1 = 1; 
+
     ADC_Init();
     I2C_Init();
     OLED_Init(); 
 
     OLED_Clear();
-    OLED_String(1, 10, "PROBANDO OLED");
+    OLED_String(1, 10, "PANTALLA OK");
 
     while (1) {
         adc_temp = ADC_Leer(0);
