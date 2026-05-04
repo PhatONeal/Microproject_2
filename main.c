@@ -12,7 +12,7 @@ void main(void) {
     // Variables
     unsigned int adc_luz_raw;
     unsigned int temp_lm35, gas_porcentaje, luz_porcentaje;
-    int32_t bme_temp_dummy; 
+    int32_t bme_temp_dummy; // La leemos pero no la usamos
     uint32_t bme_hum_raw;
 
     // Inicialización
@@ -41,14 +41,22 @@ void main(void) {
     OLED_String(5, 64, "LUZ:");
 
     while (1) {
-        // --- 1. LM35 con Promedio (Filtro de ruido) ---
+        // --- 1. LM35 con Promedio y Calibración (Offset) ---
         unsigned long suma = 0;
         for(char i = 0; i < 20; i++){
             suma += ADC_Leer(0); // Leemos el canal AN0 (LM35)
             __delay_ms(2);
         }
-        // Calculamos la temperatura con el promedio de las 20 muestras
+        
+        // Calculamos la temperatura inicial (asumiendo 5.06V)
         temp_lm35 = (unsigned int)(((suma / 20) * 506UL) / 1023);
+        
+        // Ajuste por software: restamos los grados extra por desfase
+        if (temp_lm35 >= 4) {
+            temp_lm35 = temp_lm35 - 4; 
+        } else {
+            temp_lm35 = 0; // Evitamos números negativos si hace mucho frío
+        }
 
         // --- 2. BME280 (Solo Humedad) ---
         BME280_Leer(&bme_temp_dummy, &bme_hum_raw);
