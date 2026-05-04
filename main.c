@@ -1,34 +1,33 @@
-/*
- * =============================================================
- * main.c — Sistema de Monitoreo de Confort (PIC18F4550)
- * =============================================================
- * Fase 1: Configuración inicial de oscilador y puertos analógicos.
- */
-
 #include <xc.h>
-#include "Configuracion.h" // Aquí están los #pragma config
+#include "Configuracion.h"
+#include "ADC_Libreria.h" // Inclusión de librería ADC
 
 #define _XTAL_FREQ  8000000UL
 
 void main(void) {
-    // --- 1. Configuración de Oscilador a 8 MHz ---
-    OSCCON = 0x72; 
-    while (!OSCCONbits.IOFS); // Espera a que el oscilador se estabilice
+    // Variables para datos crudos (0 a 1023)
+    unsigned int adc_temp_raw;
+    unsigned int adc_gas_raw;
+    unsigned int adc_luz_raw;
 
-    // --- 2. Configuración de Puertos (ADC) ---
-    // ADCON1 = 0x0C -> Configura AN0, AN1 y AN2 como Analógicos
-    // VREF+ = VDD (5V), VREF- = VSS (GND)
+    // Configuración de oscilador a 8MHz
+    OSCCON = 0x72; 
+    while (!OSCCONbits.IOFS);
+
+    // Configuración de puertos analógicos
     ADCON1 = 0x0C; 
-    
-    // Configuramos los pines físicos como entradas (1 = Entrada)
-    // RA0 (LM35), RA1 (MQ135), RA2 (LDR)
     TRISA = 0x07; 
-    
-    // Limpiamos los pestillos por seguridad
     LATA = 0x00;
 
+    // Inicializar módulo ADC
+    ADC_Init(); 
+
     while (1) {
-        // Bucle principal vacío.
-        // Aquí agregaremos las lecturas crudas en la siguiente fase.
+        // Lectura directa de los pines
+        adc_temp_raw = ADC_Leer(0); // LM35 en AN0
+        adc_gas_raw = ADC_Leer(1);  // MQ135 en AN1
+        adc_luz_raw = ADC_Leer(2);  // LDR en AN2
+        
+        __delay_ms(100); // Pausa de estabilidad
     }
 }
