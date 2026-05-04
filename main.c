@@ -10,7 +10,7 @@
 
 void main(void) {
     // Variables
-    unsigned int adc_temp_raw, adc_luz_raw;
+    unsigned int adc_luz_raw;
     unsigned int temp_lm35, gas_porcentaje, luz_porcentaje;
     int32_t bme_temp_dummy; 
     uint32_t bme_hum_raw;
@@ -41,15 +41,20 @@ void main(void) {
     OLED_String(5, 64, "LUZ:");
 
     while (1) {
-        // --- 1. LM35 Crudo ---
-        adc_temp_raw = ADC_Leer(0);
-        temp_lm35 = (unsigned int)((adc_temp_raw * 506UL) / 1023);
+        // --- 1. LM35 con Promedio (Filtro de ruido) ---
+        unsigned long suma = 0;
+        for(char i = 0; i < 20; i++){
+            suma += ADC_Leer(0); // Leemos el canal AN0 (LM35)
+            __delay_ms(2);
+        }
+        // Calculamos la temperatura con el promedio de las 20 muestras
+        temp_lm35 = (unsigned int)(((suma / 20) * 506UL) / 1023);
 
         // --- 2. BME280 (Solo Humedad) ---
         BME280_Leer(&bme_temp_dummy, &bme_hum_raw);
         unsigned int hum_final = (unsigned int)bme_hum_raw;
 
-        // --- 3. MQ135 INVERTIDO (Corrección aplicada) ---
+        // --- 3. MQ135 INVERTIDO ---
         unsigned int gas_inv = 1023 - ADC_Leer(1);
         gas_porcentaje = (unsigned int)((gas_inv * 100UL) / 1023);
 
