@@ -3,7 +3,7 @@
 
 /*
  * =============================================================
- * OLED_libreria.h ? Driver I2C + SSD1306 para PIC18F4550
+ * OLED_libreria.h Driver I2C + SSD1306 para PIC18F4550
  * Pines I2C  : RB1 = SCL  |  RB0 = SDA
  * =============================================================
  */

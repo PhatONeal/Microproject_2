@@ -1,7 +1,7 @@
 /*
  * =============================================================
- * main.c — Sistema de Monitoreo (Versión Centrada)
- * RB0 = SDA, RB1 = SCL (PIC18F4550)
+ * main.c - Sistema de Monitoreo Ambiental (Versión Centrada)
+ * PIC18F4550 | OLED SSD1306 | LM35 | LDR | MQ135
  * =============================================================
  */
 
@@ -12,94 +12,105 @@
 #include "OLED_Libreria.h"
 #include "ADC_Libreria.h"
 #include "BME280_Libreria.h"
+#include "Actuadores_Libreria.h"
 
-#define _XTAL_FREQ  8000000UL
+#define _XTAL_FREQ 8000000UL
 
 void main(void) {
-    // Variables
-    unsigned int adc_luz_raw;
-    unsigned int gas_porcentaje, luz_porcentaje;
-    unsigned int temp_lm35_10, t_entero, t_decimal; 
-    int32_t bme_temp_dummy; 
-    uint32_t bme_hum_raw;
-    char buf_temp[12];
+    // Variables unificadas
+    unsigned int adc_temp, adc_luz, adc_gas;
+    unsigned int temp_lm35_10;
+    unsigned int luz_porcentaje;
+    unsigned int gas_porcentaje;
 
-    // Inicialización
-    OSCCON = 0x72; 
-    ADCON1 = 0x0C; 
-    TRISA  = 0x07; 
-    // TRISB ya no se configura aquí, está dentro de I2C_Init()
+    // Variables BME280 (en espera)
+    int32_t bme_temp_dummy;
+    uint32_t bme_hum_raw;
+
+    char buffer_oled[16];
+
+    // Inicialización general
+    OSCCON = 0x72;   // Reloj a 8 MHz
 
     ADC_Init();
     I2C_Init();
     OLED_Init();
     BME280_Init();
+    Actuadores_Init();
 
+    // Pantalla de bienvenida
     OLED_Clear();
-    OLED_String(1, 15, "   MONITOR    ");
-    OLED_String(2, 15, "  AMBIENTAL   ");
+    OLED_String(2, 10, "SISTEMA INICIADO");
     __delay_ms(1500);
     OLED_Clear();
 
-    // ETIQUETAS ESTÁTICAS (Nueva distribución)
-    OLED_String(0, 10, "TEMP (LM35):");
-    OLED_String(2, 10, "HUMEDAD BME:");
-    OLED_String(5, 0, "AIRE:");
-    OLED_String(5, 64, "LUZ:");
+    // Etiquetas fijas para evitar parpadeos
+    OLED_String(0, 0, "T:");
+    OLED_String(2, 0, "LUZ:");
+    OLED_String(4, 0, "AIRE:");
+    OLED_String(6, 0, "FAN:");
 
     while (1) {
-        // --- 1. LM35 con Promedio y Alta Precisión (1 decimal) ---
-        unsigned long suma = 0;
-        for(char i = 0; i < 20; i++){
-            suma += ADC_Leer(0); 
-            __delay_ms(2);
-        }
-        
-        // Multiplicamos por 5060 para conservar 1 decimal
-        unsigned int temp_cruda = suma / 20;
-        temp_lm35_10 = (unsigned int)((temp_cruda * 5060UL) / 1023);
-        
-        // Ajuste por software: restamos 40 (equivale a 4.0 grados)
-        if (temp_lm35_10 >= 40) {
-            temp_lm35_10 = temp_lm35_10 - 40; 
-        } else {
-            temp_lm35_10 = 0; 
-        }
+        // --- 1. LM35 con promedio de 10 muestras (AN0) ---
+        unsigned long suma_temp = 0;
+        for (char i = 0; i < 10; i++) { suma_temp += ADC_Leer(0); __delay_ms(1); }
+        adc_temp = suma_temp / 10;
 
-        t_entero = temp_lm35_10 / 10;
-        t_decimal = temp_lm35_10 % 10;
+        // 2. LDR (AN2) y MQ135 (AN1) - lectura directa
+        adc_luz = ADC_Leer(2);
+        adc_gas = ADC_Leer(1);
 
-        // 2. BME280 (Solo Humedad)
+        // --- Conversiones matemáticas ---
+
+        // LM35: (ADC * 5000mV) / 1024 -> resultado x10, ej: 265 = 26.5 C
+        temp_lm35_10 = (unsigned int)((adc_temp * 5000UL) / 1024);
+
+        luz_porcentaje = (unsigned int)((adc_luz * 100UL) / 1023);
+
+        // MQ135 invertido: menos resistencia = más gas
+        gas_porcentaje = (unsigned int)(((1023UL - adc_gas) * 100UL) / 1023);
+
+        // Lectura silenciosa del BME280
         BME280_Leer(&bme_temp_dummy, &bme_hum_raw);
-        unsigned int hum_final = (unsigned int)bme_hum_raw;
 
-        // 3. MQ135 Invertido
-        unsigned int gas_inv = 1023 - ADC_Leer(1);
-        gas_porcentaje = (unsigned int)((gas_inv * 100UL) / 1023);
+        // --- Control de actuadores ---
 
-        // 4. LDR
-        luz_porcentaje = (unsigned int)((ADC_Leer(2) * 100UL) / 1023);
+        // LEDs en cascada según nivel de luz
+        LEDs_Cascada(luz_porcentaje);
 
-        // --- MOSTRAR DATOS ---
-        
-        // Temperatura Analógica (Con decimal)
-        sprintf(buf_temp, "%u.%u C ", t_entero, t_decimal);
-        OLED_String(0, 85, buf_temp);
+        // Ventilador térmico: umbral 26.0 °C (260 en x10)
+        if (temp_lm35_10 >= 260) {
+            Ventilador_SetPWM(1023);      // 100%
+            OLED_String(6, 30, "ON ");
+        } else {
+            Ventilador_SetPWM(0);         // Apagado
+            OLED_String(6, 30, "OFF");
+        }
 
-        // Humedad Digital (BME)
-        OLED_String(2, 85, "    ");
-        OLED_Int(2, 85, hum_final);
-        OLED_String(2, 110, "%");
+        // Buzzer de alarma: menos del 40% = aire sucio
+        if (gas_porcentaje < 40) {
+            Buzzer_Set(1);
+        } else {
+            Buzzer_Set(0);
+        }
 
-        // Fila inferior (Gas y Luz)
-        OLED_String(6, 0, "    ");
-        OLED_Int(6, 0, gas_porcentaje);
-        OLED_String(6, 30, "%");
+        // --- Actualización de pantalla ---
+        sprintf(buffer_oled, "%u.%u C  ", temp_lm35_10 / 10, temp_lm35_10 % 10);
+        OLED_String(0, 30, buffer_oled);
 
-        OLED_String(6, 90, "    ");
-        OLED_Int(6, 90, luz_porcentaje);
-        OLED_String(6, 115, "%");
+        sprintf(buffer_oled, "%u %%  ", luz_porcentaje);
+        OLED_String(2, 30, buffer_oled);
 
-        __delay_ms(500);
+        sprintf(buffer_oled, "%u %%  ", gas_porcentaje);
+        OLED_String(4, 30, buffer_oled);
+
+        // Estado de calidad del aire
+        if (gas_porcentaje < 40) {
+            OLED_String(4, 70, "!PELIGRO");
+        } else {
+            OLED_String(4, 70, " NORMAL ");
+        }
+
+        __delay_ms(300);
     }
 }

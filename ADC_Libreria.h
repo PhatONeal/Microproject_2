@@ -3,12 +3,6 @@
 
 #include <xc.h>
 
-/*
- * =============================================================
- * ADC_Libreria.h ? Conversor Analógico a Digital (10 bits)
- * =============================================================
- */
-
 void ADC_Init(void);
 unsigned int ADC_Leer(unsigned char canal);
 

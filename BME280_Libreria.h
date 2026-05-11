@@ -3,13 +3,6 @@
 
 #include <stdint.h>
 
-/*
- * =============================================================
- * BME280_Libreria.h ? Driver simplificado Temperatura y Humedad
- * Dirección I2C por defecto: 0x76 (SDO a GND)
- * =============================================================
- */
-
 void BME280_Init(void);
 
 // Lee los valores compensados. 
