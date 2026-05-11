@@ -3,11 +3,21 @@
 
 #include <stdint.h>
 
+/*
+ * =============================================================
+ * BME280_Libreria.h - Driver simplificado Temperatura y Humedad
+ * Direccion I2C: 0x76 (SDO a GND) => Write=0xEC, Read=0xED
+ * =============================================================
+ */
+
 void BME280_Init(void);
 
-// Lee los valores compensados. 
-// La temperatura viene multiplicada por 100 (Ej: 2550 = 25.50 °C)
-// La humedad viene en porcentaje (Ej: 55 = 55 %RH)
+/*
+ * BME280_Leer
+ * temperatura : compensada en formato XX.XX (2550 = 25.50 C)
+ * humedad     : porcentaje directo 0-100 %RH
+ *               (lectura separada desde 0xFD, sin calibracion de fabrica)
+ */
 void BME280_Leer(int32_t *temperatura, uint32_t *humedad);
 
-#endif
+#endif /* BME280_LIBRERIA_H */

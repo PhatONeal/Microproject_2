@@ -1,9 +1,9 @@
- #ifndef OLED_LIBRERIA_H
+#ifndef OLED_LIBRERIA_H
 #define OLED_LIBRERIA_H
 
 /*
  * =============================================================
- * OLED_libreria.h Driver I2C + SSD1306 para PIC18F4550
+ * OLED_libreria.h - Driver I2C + SSD1306 para PIC18F4550
  * Pines I2C  : RB1 = SCL  |  RB0 = SDA
  * =============================================================
  */
@@ -11,10 +11,10 @@
 #include <xc.h>
 
 #ifndef _XTAL_FREQ
-    #define _XTAL_FREQ  8000000UL   // 8 MHz
+    #define _XTAL_FREQ  8000000UL
 #endif
 
-#define I2C_BAUDRATE    19          // 100 kHz @ 8 MHz
+#define I2C_BAUDRATE    19          /* 100 kHz @ 8 MHz */
 
 #define OLED_ADDR       0x78
 #define OLED_CMD        0x00

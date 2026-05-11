@@ -4,42 +4,36 @@
     #define _XTAL_FREQ 8000000UL
 #endif
 
+/*
+ * ADC_Init
+ * ADCON1 = 0x0C : AN0, AN1, AN2 como analogicos. Resto digital.
+ * ADCON2 = 0xBD : Justificado derecha | 20 TAD adquisicion | Fosc/16
+ *   0xBD = 1011 1101
+ *   Bit7 (ADFM)  = 1  -> resultado justificado a la derecha (10 bits utiles)
+ *   Bits5:3 (ACQT) = 111 -> 20 TAD de adquisicion (mas estable para LM35)
+ *   Bits2:0 (ADCS) = 101 -> Fosc/16 (adecuado para 8 MHz)
+ */
 void ADC_Init(void) {
-    /* * ADCON1: 
-     * Configura voltajes de referencia (VDD y VSS internos).
-     * El valor 0x0C (0000 1100) configura AN0, AN1 y AN2 como ANALOGICOS.
-     * El resto de pines del Puerto A y B se mantienen digitales.
-     */
     ADCON1 = 0x0C;
-
-    /* * ADCON2:
-     * Bit 7 (ADFM) = 1 (Justificado a la derecha, para usar los 10 bits).
-     * Bits 5:3 (ACQT) = 101 (12 TAD, tiempo de adquisicion).
-     * Bits 2:0 (ADCS) = 010 (Fosc/32, reloj de conversion para 8 MHz).
-     * Total = 10100010 = 0xA2
-     */
-    ADCON2 = 0xA2;
-
-    /* Enciende el modulo ADC */
+    ADCON2 = 0xBD;
     ADCON0bits.ADON = 1;
 }
 
+/*
+ * ADC_Leer
+ * Selecciona el canal, espera estabilizacion y retorna resultado de 10 bits.
+ * Solo acepta canales 0, 1 o 2 (proteccion incluida).
+ */
 unsigned int ADC_Leer(unsigned char canal) {
-    if(canal > 2) return 0; // Proteccion: Solo usamos 0, 1 o 2
+    if (canal > 2) return 0;
 
-    // Limpia el canal actual (bits 5:2 de ADCON0) y asigna el nuevo
-    ADCON0 &= 0xC3; 
+    ADCON0 &= 0xC3;
     ADCON0 |= (canal << 2);
 
-    // Pequeña pausa para estabilizar el capacitor de retencion interno
-    __delay_us(20);
+    __delay_us(30);
 
-    // Inicia la conversion analógica a digital
     ADCON0bits.GO = 1;
+    while (ADCON0bits.GO);
 
-    // Espera a que termine (el hardware pone el bit en 0 al finalizar)
-    while(ADCON0bits.GO);
-
-    // Retorna el resultado de 10 bits combinando ADRESH y ADRESL
-    return ((ADRESH << 8) + ADRESL);
+    return ((unsigned int)(ADRESH << 8) | ADRESL);
 }
