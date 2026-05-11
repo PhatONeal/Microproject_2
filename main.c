@@ -51,20 +51,22 @@
 #define RELE_CALOR      LATDbits.LATD0
 
 // Setpoints de control
-#define SP_TEMP_CAL_ON    26    // C: enciende calefactor
-#define SP_TEMP_CAL_OFF   27    // C: apaga calefactor (histeresis)
+#define SP_TEMP_CAL_ON    25    // C: enciende calefactor
+#define SP_TEMP_CAL_OFF   26    // C: apaga calefactor (histeresis)
 #define SP_GAS_RAW       400    // ADC raw: umbral peligro MQ135
-#define SP_TEMP_ALARMA    40    // C: temperatura critica
+#define SP_TEMP_ALARMA    35    // C: temperatura critica
 
-// Umbral de humedad para ventilador
-// Se define en 50% para mayor reactividad del BME280.
-#define HUM_UMBRAL_FAN    50
+// Umbrales de humedad para el ventilador
+// HUM_UMBRAL_BAJO: arranca al 30% desde este valor
+// HUM_UMBRAL_ALTO: sube al 100% desde este valor
+#define HUM_UMBRAL_BAJO   40
+#define HUM_UMBRAL_ALTO   55
 
 // Ticks de confirmacion (1 tick ~ 240ms)
-// GAS_TICKS  = 13 x 240ms ~ 3 segundos
-// TEMP_TICKS = 63 x 240ms ~ 15 segundos
-#define GAS_TICKS         13
-#define TEMP_TICKS        63
+// GAS_TICKS  =  5 x 240ms ~ 1.2 segundos
+// TEMP_TICKS = 17 x 240ms ~   4 segundos
+#define GAS_TICKS         5
+#define TEMP_TICKS        17
 
 void main(void) {
     // Variables ADC
@@ -155,7 +157,7 @@ void main(void) {
         bme_t_dec    = (unsigned int)((temp_bme % 100) / 10);
 
         // --- 5. Control de calefaccion (basado en LM35) ---
-        // ON < 26.0 C (260 x10) | OFF > 27.0 C (270 x10)
+        // ON < 25.0 C (250 x10) | OFF > 26.0 C (260 x10)
         if (temp_c < (SP_TEMP_CAL_ON  * 10)) RELE_CALOR = 1;
         if (temp_c > (SP_TEMP_CAL_OFF * 10)) RELE_CALOR = 0;
 
@@ -164,20 +166,21 @@ void main(void) {
 
         // --- 7. Control del ventilador - prioridad: gas > humedad ---
         // Sin temperatura: temp=0 nunca alcanza FAN_TEMP_MEDIA (25).
-        // Humedad proporcional desde HUM_UMBRAL_FAN (50%) hasta 100%.
+        // Escalonado por humedad: >= 55% => 100%, 40-54% => 30%, < 40% => apagado.
         {
             unsigned int duty = 0;
 
             if (gas_raw > FAN_GAS_UMBRAL) {
                 // Gas peligroso: maximo inmediato
                 duty = 1023;
-            } else if (hum_pct > HUM_UMBRAL_FAN) {
-                // Humedad alta: proporcional. Rango 50-100% => duty 0-1023
-                // Factor: 1023/50 ~ 20.46, usamos 20
-                duty = (unsigned int)((unsigned long)
-                       (hum_pct - HUM_UMBRAL_FAN) * 20UL);
-                if (duty > 1023) duty = 1023;
+            } else if (hum_pct >= HUM_UMBRAL_ALTO) {
+                // Humedad >= 55%: velocidad maxima
+                duty = 1023;
+            } else if (hum_pct >= HUM_UMBRAL_BAJO) {
+                // Humedad 40-54%: velocidad fija al 30% (307/1023)
+                duty = 307;
             }
+            // Por debajo de 40%: ventilador apagado (duty = 0)
 
             // Aplicar duty al CCP2
             CCPR2L  = (unsigned char)(duty >> 2);
@@ -187,7 +190,7 @@ void main(void) {
             fan_activo = (duty > 0) ? 1 : 0;
         }
 
-        // --- 8. Alarma de gas (~3 segundos) ---
+        // --- 8. Alarma de gas (~1.2 segundos) ---
         if (gas_raw > SP_GAS_RAW) {
             if (gas_timer < GAS_TICKS) gas_timer++;
             else                       alarma_gas = 1;
@@ -196,7 +199,7 @@ void main(void) {
             alarma_gas = 0;
         }
 
-        // --- 9. Alarma de temperatura (~15 segundos) ---
+        // --- 9. Alarma de temperatura (~4 segundos) ---
         // Basada en LM35; temp_c / 10 = grados enteros.
         if ((temp_c / 10) > SP_TEMP_ALARMA) {
             if (temp_timer < TEMP_TICKS) temp_timer++;

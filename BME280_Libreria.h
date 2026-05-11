@@ -24,8 +24,8 @@
  * =============================================================
  */
 
-#define BME280_ADDR_W  0xEE   /* 0x77 << 1       */
-#define BME280_ADDR_R  0xEF   /* (0x77 << 1) | 1 */
+#define BME280_ADDR_W  0xEC   /* 0x76 << 1       */
+#define BME280_ADDR_R  0xED   /* (0x76 << 1) | 1 */
 
 typedef struct {
     unsigned short dig_T1;
