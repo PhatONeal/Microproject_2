@@ -14,8 +14,7 @@
     #define _XTAL_FREQ  8000000UL
 #endif
 
-#define I2C_BAUDRATE    19          /* 100 kHz @ 8 MHz */
-
+#define I2C_BAUDRATE    19
 #define OLED_ADDR       0x78
 #define OLED_CMD        0x00
 #define OLED_DATA       0x40
@@ -23,11 +22,13 @@
 #define OLED_PAGES      8
 
 /* Prototipos I2C */
-void I2C_Init(void);
-void I2C_Ready(void);
+void          I2C_Init(void);
+void          I2C_Ready(void);
 unsigned char I2C_Start(unsigned char addr);
 unsigned char I2C_Write(unsigned char data);
-void I2C_Stop(void);
+void          I2C_Stop(void);
+void          I2C_Restart(void);              /* Repeated Start ? usado por BME280 */
+unsigned char I2C_Read(unsigned char ack);    /* Lectura con ACK/NACK ? usado por BME280 */
 
 /* Prototipos OLED */
 void OLED_Init(void);

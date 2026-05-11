@@ -145,6 +145,34 @@ void I2C_Stop(void) {
     PIR1bits.SSPIF = 0;
 }
 
+void I2C_Restart(void) {
+    /* Repeated Start: mantiene control del bus entre escritura y lectura.
+     * Identico al I2C_Restart del proyecto Completo del amigo.
+     */
+    I2C_Ready();
+    SSPCON2bits.RSEN = 1;
+    while (SSPCON2bits.RSEN);
+    __delay_us(5);
+}
+
+unsigned char I2C_Read(unsigned char ack) {
+    /* Lee un byte del bus I2C.
+     * ack=1 -> envia ACK  (hay mas bytes por leer)
+     * ack=0 -> envia NACK (ultimo byte de la transaccion)
+     * Identico al I2C_Read del proyecto Completo del amigo.
+     */
+    unsigned char temp;
+    I2C_Ready();
+    SSPCON2bits.RCEN = 1;
+    while (!SSPSTATbits.BF);
+    temp = SSPBUF;
+    I2C_Ready();
+    SSPCON2bits.ACKDT = ack ? 0 : 1;
+    SSPCON2bits.ACKEN = 1;
+    while (SSPCON2bits.ACKEN);
+    return temp;
+}
+
 void OLED_Comando(unsigned char cmd) {
     I2C_Start(OLED_ADDR);
     I2C_Write(OLED_CMD);
